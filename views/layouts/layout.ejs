@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title><%= title%></title>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/css/layout.css">
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    </head>
+
+    <style>
+    body {
+        background:#e0f2f1;
+    }
+        #navbarSupportedContent ul li{
+            margin-right:20px;
+            cursor:pointer;
+        }
+
+#snackbar {
+  visibility: hidden;
+  min-width: 250px;
+  margin-left: -125px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 2px;
+  padding: 16px;
+  position: fixed;
+  z-index: 1;
+  left: 50%;
+  bottom: 30px;
+  font-size: 17px;
+}
+
+#snackbar.show {
+  visibility: visible;
+  -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@-webkit-keyframes fadein {
+  from {bottom: 0; opacity: 0;}
+  to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadein {
+  from {bottom: 0; opacity: 0;}
+  to {bottom: 30px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+  from {bottom: 30px; opacity: 1;}
+  to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+  from {bottom: 30px; opacity: 1;}
+  to {bottom: 0; opacity: 0;}
+}
+
+    </style>
+    <body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <a class="navbar-brand" href="#">
+   <!--<img src="https://getbootstrap.com/assets/brand/bootstrap-solid.svg" width="30" height="30" alt="">-->
+  </a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link" href="/">Home </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/clients">Clients</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="consignee">Consignee</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/cargo">Container</a>
+      </li>
+       <li class="nav-item">
+        <a class="nav-link" href="/roro">RORO</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/powerOfAttroney_nra">POA / NRA Contract</a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown_2">
+          More Receipts
+        </a>
+        <div class="dropdown-menu1" id="dropdown_menu_2">
+               <div class="dropdown-menu-header" id="dropdown-menu-header" onclick="window.location.href='/invoice'">
+                   <span><i class="far fa-file-alt"></i> Invoice</span>
+               </div>
+               <div class="dropdown-menu-body" id="dropdown-menu-body"  onclick="window.location.href='/ectn'" style="display:none">
+                    <div class="menu-body-segment">
+                       <span><i class="fab fa-wpforms"></i> ECTN Form</span>
+                   </div>
+               </div>
+               <div class="dropdown-menu-body" id="dropdown-menu-body" onclick="window.location.href='/dock_r'">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-credit-card"></i> Dock Receipt</span>
+                   </div>
+               </div>
+               <div class="dropdown-menu-body" id="dropdown-menu-body" onclick="window.location.href='/roro_r'">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-credit-card"></i> Roro Receipt</span>
+                   </div>
+               </div>
+               <!--<div class="dropdown-menu-body" id="dropdown-menu-body" onclick="window.location.href='/bill_lading'">-->
+               <!--     <div class="menu-body-segment">-->
+               <!--        <span><i class="fas fa-bullseye"></i> Bill of Lading</span>-->
+               <!--    </div>-->
+               <!--</div>-->
+               <div class="dropdown-menu-body" id="dropdown-menu-body" style="display:none">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-money-bill-alt"></i> Commercial Invoice</span>
+                   </div>
+               </div>
+               <div class="dropdown-menu-footer " id="dropdown-menu-footer" onclick="window.location.href='/bookingconfirmation'">
+                   <span><i class="fab fa-ravelry"></i> Booking Confirmation</span>
+               </div>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/OLDSAILORS  POWER OF ATTORNEY.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Charleston letter of intent</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/OTI Legal Disclaimer of Cargo Ownership.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> OTI Legal Disclaimer of Cargo Ownership</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/SAMPLE DOC RECEITE.doc" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> SAMPLE DOC RECEITE</span>
+                   </div>
+               </a>
+           </div>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown_3">
+          Others
+        </a>
+        <div class="dropdown-menu1" id="dropdown_menu_3">
+               <div class="dropdown-menu-header" id="dropdown-menu-header" onclick="window.location.href='/invoice_in'">
+                   <span><i class="far fa-credit-card"></i> Independent Invoice</span>
+               </div>
+               <div class="dropdown-menu-body" id="dropdown-menu-body" onclick="window.location.href='/expense'">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Expense</span>
+                   </div>
+               </div>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/sc.pdf" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Shippment Checklist</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/oti.pdf" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> oti legal disclaime</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/values.pdf" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> value</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/AUTHORIZATION TO EXPORT VEHICLE customs.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> AUTHORIZATION TO EXPORT VEHICLE customs</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/AUTHORIZATION TO EXPORT VEHICLE own.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> AUTHORIZATION TO EXPORT VEHICLE own</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/Authorization to Prepare Electronic Export Information.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Authorization to Prepare Electronic Export Information</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/Charleston_Letter_of_Intent.doc" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Charleston letter of intent</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/Drain and Disconnect.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Drain and Disconnect</span>
+                   </div>
+               </a>
+               <a class="dropdown-menu-body" id="dropdown-menu-body" href="/Letterhead.docx" target="_blank">
+                    <div class="menu-body-segment">
+                       <span><i class="far fa-file-alt"></i> Letterhead</span>
+                   </div>
+               </a>
+
+
+              <% if(user.role === "Admin"){ %>
+               <div class="dropdown-menu-footer " id="dropdown-menu-footer" onclick="window.location.href='/admin/index'">
+                   <span><i class="fas fa-users"></i> Admin Panel</span>
+               </div>
+               <% } %>
+           </div>
+      </li>
+    </ul>
+
+    <div class="nav-item dropdown" style="margin-right:55px;">
+        <a class="nav-link dropdown-toggle"  id="navbarDropdown_4" style="cursor:pointer;">
+         <img src="<%=user.photo%>" width="30" height="30" alt=""> <%=user.first_name%>
+        </a>
+          <div class="dropdown-menu1" id="dropdown_menu_4">
+               <div class="dropdown-menu-header" id="dropdown-menu-header">
+                   <span><i class="fas fa-cogs"></i> My Account</span>
+               </div>
+              <!-- <div class="dropdown-menu-body" id="dropdown-menu-body">
+                    <div class="menu-body-segment">
+                       <span>Terms and Privacy</span>
+                   </div>
+               </div>-->
+               <div class="dropdown-menu-footer logoutDiv" id="dropdown-menu-footer">
+                   <span><i class="fas fa-sign-out-alt"></i> Log out</span>
+               </div>
+           </div>
+      </div>
+  </div>
+</nav>
+         <%- body %>
+
+         <div id="snackbar">Data Saved..</div>
+
+        <script defer src="https://use.fontawesome.com/releases/v5.0.9/js/all.js" integrity="sha384-8iPTk2s/jMVj81dnzb/iFR2sdA7u06vHJyyLlAd4snFpCl/SnyUjRrbdJsw1pGIl" crossorigin="anonymous"></script>
+                <!-- jQuery library -->
+
+
+        <!-- Popper JS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+
+        <!-- Latest compiled JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+        <script src="/js/layout.js"></script>
+
+
+    </body>
+</html>

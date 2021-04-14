@@ -1,0 +1,574 @@
+
+<style>
+    .client-body {
+        margin-top:20px;
+        z-index:-1;
+    }
+
+    .clientDataSection {
+        height:70vh;
+        overflow-y:auto;
+        overflow-x:hidden;
+    }
+
+    .loader {
+            width:100px;
+            height:100px;
+            top:0;
+            margin-top:40vh;
+            margin-left:79vh;
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top-color: #1abc9c;
+            border-bottom-color: #3498db;
+            animation: coloredspin 4s linear infinite;
+            display:none;
+            position:absolute;
+            z-index:1;
+
+        }
+        @keyframes coloredspin {
+              0%{
+                transform: rotate(0deg) scale(1);
+                border-top-color: #1abc9c;
+                border-bottom-color: #1abc9c;
+              }
+              25% {
+                border-top-color: #2ecc71;
+                border-bottom-color: #2ecc71;
+              }
+              50% {
+                transform: rotate(360deg) scale(1.05);
+                border-top-color: #3498db;
+                border-bottom-color: #3498db;
+              }
+              75% {
+                border-top-color: #9b59b6;
+                border-bottom-color: #9b59b6;
+              }
+              100%{
+                transform: rotate(720deg) scale(1);
+                border-top-color: #1abc9c;
+                border-bottom-color: #1abc9c;
+              }
+            }
+
+
+.dropdown-menu11 {
+    padding: 0px;
+    width: 350px;
+    height:200px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    position: absolute;
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index:1;
+   display:none;
+}
+
+
+
+
+
+
+
+.dropdown-menu11 .dropdown-menu-body1 {
+    padding:0px;
+    border-bottom: 1px solid #e0e0e0;
+    font-family: 'PT Sans', sans-serif;
+
+}
+
+.dropdown-menu11 .dropdown-menu-body1 .menu-body-segment1 {
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+}
+
+
+.dropdown-menu11 .dropdown-menu-body1 .menu-body-segment1 span {
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    font-size: 15px;
+    color: #616161;
+
+}
+
+.dropdown-menu11 .dropdown-menu-body1 .menu-body-segment1:hover{
+    cursor: pointer;
+    background-color: #eeeeee;
+    color: #000;
+}
+
+
+
+
+</style>
+<div class="container-fluid">
+    <div style="margin-top:70px;"></div>
+    <h3 class="text-center">Booking Confirmation</h3>
+    <div class="client-body" id="clientBody">
+        <form>
+            <div class="row">
+              <div class="col-md-4">
+                  <div class="form-group">
+                    <select class="form-control" id="clients_dropdown">
+                        <option>Display data per client</option>
+                        <% clientsData.forEach(function(clients){ %>
+                           <option value="<%=clients._id%>"><%=clients.full_name%></option>
+                        <% }) %>
+                    </select>
+                  </div>
+              </div>
+              <div class="col-md-4">
+                  <div class="form-group">
+                    <button type="button" class="btn btn-primary newFormBtn" id="newFormBtn" data-toggle="modal" data-target="#newFormModal">New Form</button>
+                  </div>
+              </div>
+              <div class="col-md-4">
+                  <div class="form-group" style="float:right;">
+                    <button type="button" class="btn btn-warning newCargo" id="newCargo" onclick="location.reload()"><i class="fas fa-sync-alt"></i> Reload Page Data</button>
+                  </div>
+              </div>
+            </div>
+        </form>
+            <table class="table table-striped table-dark">
+                <thead style="background:#3F729B;">
+                  <tr>
+                    <th>Date Added</th>
+                    <th style="display:block;" id="client_header">Clients Name</th>
+                    <th style="background-color:#00897b  ;color:#fff;">Vessel Name</th>
+                    <th>Booking Number</th>
+                    <th>Voyage Number</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody class="table_body">
+                <% foundAllData.forEach(function(content){ %>
+
+                  <tr id="rowID">
+                    <td><%=(moment.parseZone(content.createdAt).format('l') === moment.parseZone(new Date()).format('l') ? 'Today': moment(content.createdAt).format("ll"))%></td>
+                    <td>
+                       <%=content.Client[0].full_name%>
+                    </td>
+                    <td><%=content.vessel_name%></td>
+                    <td><%=content.booking_number%></td>
+                    <td><%=content.voyage_number%></td>
+
+                    <td>
+                         <a class="btn btn-outline-success btn-sm " href="/bc/<%=content._id%>/email/<%=content.Client[0]._id%>"><i class="fas fa-envelope-open"></i> Email</a>
+                        <a class="btn btn-outline-info btn-sm openEditModal" href="/bc/<%=content._id%>/editRoute"><i class="far fa-edit"></i> Edit</a>
+                        <button class="btn btn-outline-danger btn-sm deleteMessage1" id="<%=content._id%>" data-toggle="modal" data-target=".deleteMessageModal1"><i class="far fa-trash-alt"></i> Delete</button>
+                    </td>
+                  </tr>
+                 <% }) %>
+                </tbody>
+              </table>
+    </div>
+     <% if (pages && pages > 0) { %>
+    <ul class="pagination justify-content-center">
+        <% if (current == 1) { %>
+        <li class="page-item disabled"><a class="page-link" style="display:none;">First</a></li>
+        <% } else { %>
+        <li class="page-item" ><a href="/bookingconfirmation" class="page-link" >First</a></li>
+        <% } %>
+
+        <% if (current == 1) { %>
+        <li class="page-item disabled"><a class="page-link" style="display:none;">Previous</a></li>
+        <% } else { %>
+        <li class="page-item"><a href="/bookingconfirmation?page=<%= Number(current) - 1 %>" class="page-link" >Previous</a></li>
+        <% } %>
+
+        <% var i = (Number(current) > 5 ? Number(current) - 4 : 1) %>
+
+        <% for (; i <= (Number(current) + 4) && i <= pages; i++) { %>
+        <% if (i == current) { %>
+        <li class="page-item active"><a class="page-link"><%= i %></a></li>
+        <% } else { %>
+        <li class="page-item"><a href="/bookingconfirmation?page=<%= i %>" class="page-link"><%= i %></a></li>
+        <% } %>
+
+        <% } %>
+
+        <% if (current == pages) { %>
+        <li class="page-item disabled"><a class="page-link" style="display:none;">Next</a></li>
+        <% } else { %>
+        <li class="page-item"><a href="/bookingconfirmation?page=<%= Number(current) + 1 %>" class="page-link">Next</a></li>
+        <% } %>
+
+        <% if (current == pages) { %>
+        <li class="page-item disabled"><a class="page-link" style="display:none;">Last</a></li>
+        <% } else { %>
+        <li class="page-item"><a href="/bookingconfirmation?page=<%= pages %>" class="page-link">Last</a></li>
+        <% } %>
+    </ul>
+    <% } %>
+</div>
+
+
+<!--Delete Client-->
+<div class="modal fade deleteMessageModal1" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+         <div style="padding:10px;text-align:center;">
+           <p>Delete this data ?</p>
+           <span id="client_id"></span>
+           <button class="btn btn-info" data-dismiss="modal">Cancel</button>
+           <button class="btn btn-danger delete1" id="">Delete</button>
+         </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="newFormModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" data-keyboard="false" data-backdrop="static">
+  <div class="modal-dialog modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <form action="/b_c/new" method="POST">
+          <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">New Booking Confirmation</h5>
+        <p class="poa_nra_id_" id=""></p>
+         <p class="cargo_id" id=""></p>
+         <p class="bookingc_id" id=""></p>
+        <button type="button" class="close" onclick="location.reload()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+         <div class="bookingForm" style="display:block;">
+             <div class="section1" style="display:block;">
+             <div class="row">
+                 <div class="col-md-6">
+                     <div class="form-group">
+                         <label>Client</label>
+                         <select class="form-control" id="clientdropdown" name="clientdropdown">
+                             <option>Select a Client</option>
+                         </select>
+                     </div>
+                 </div>
+                 <div class="col-md-6">
+                     <div class="form-group">
+                         <label>Consignee</label>
+                         <select class="form-control" id="consigneedropdown" name="consigneedropdown">
+                             <option>Select a Consignee</option>
+                         </select>
+                     </div>
+                 </div>
+             </div>
+
+            <button class="btn btn-dark next_22" style="float:right;"><i class="fas fa-arrow-right"></i> Next</button>
+         </div>
+         <div class="section2" style="display:none;">
+             <div class="s1">
+                 <div class="row">
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Vessel Name</label>
+                             <input class="form-control" placeholder="Vessel Name" name="vessel_name" id="vessel_name">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Voyage Number</label>
+                             <input class="form-control" placeholder="Voyage Number" name="voyage_number" id="voyage_number">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Booking Number</label>
+                             <input class="form-control" placeholder="Booking Number" name="booking_number" id="booking_number" autocomplete="off">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Equipment Size</label>
+                             <input class="form-control" placeholder="Equipment Size" name="equipment_size" id="equipment_size">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Total No. of Containers</label>
+                             <input class="form-control" placeholder="Total No. of Container" name="total_number_of_container" id="total_number_of_container">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Loading Terminal</label>
+                             <input class="form-control" placeholder="Loading Terminal" name="loading_terminal" id="loading_terminal">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Carrier</label>
+                             <input class="form-control" placeholder="Carrier" name="carrier" id="carrier">
+                         </div>
+                     </div>
+                     <div class="col-md-8">
+                         <div class="form-group">
+                             <label>Commodity Description</label>
+                             <textarea class="form-control" style="resize:none;" name="commodity_des" id="commodity_des"></textarea>
+                         </div>
+                     </div>
+
+           </div>
+           <hr>
+            <button class="btn btn-dark next_2" id="" style="float:right;"><i class="fas fa-arrow-right"></i> Next</button>
+            <button class="btn btn-warning back_2" id="" style="float:right;"><i class="fas fa-arrow-left"></i> Back</button>
+           </div>
+          </div>
+         <div class="section3" style="display:none;">
+                 <div class="row">
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Cut off Date</label>
+                             <input class="form-control" type="date" name="cut_off_date" id="cut_off_date">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Sail Date</label>
+                             <input class="form-control" type="date" name="sail_date" id="sail_date">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Arrival Date</label>
+                             <input class="form-control" type="date" name="arrival_date" id="arrival_date">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Type of Move</label>
+                             <input class="form-control" placeholder="Return Depot" name="return_depot" id="return_depot">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Pickup Terminal</label>
+                             <input class="form-control" placeholder="Pickup Terminal" name="pickup_terminal" id="pickup_terminal">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Place of Receipt</label>
+                             <input class="form-control" placeholder="Place of Receipt" name="place_of_recript" id="place_of_recript">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Port of Loading</label>
+                             <input class="form-control" placeholder="Port of Loading" name="port_of_loading" id="port_of_loading">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Port of Discharge</label>
+                             <input class="form-control" placeholder="Port of Discharge" name="port_of_discharge" id="port_of_discharge">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Place of Delivery</label>
+                             <input class="form-control" placeholder="Place of Delivery" name="place_of_delivery" id="place_of_delivery">
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                         <div class="form-group">
+                             <label>Rate</label>
+                             <input class="form-control" placeholder="Rate" name="rate" id="rate">
+                         </div>
+                     </div>
+                     <div class="col-md-8">
+                         <div class="form-group">
+                             <label>Notes</label>
+                             <textarea class="form-control" style="resize:none;" name="notes" id="notes"></textarea>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+         </div>
+          <div id="loading_form" style="text-align:center;display:none;">
+            <img src="http://www.dariusland.com/images/load.gif" style="width:200px; height:200px;"/>
+            <p>Saving and Redirecting to Dock Receipt</p>
+          </div>
+         <div class="dock_form" style="display:none;">
+               <!--<div class="error" id="error">-->
+          <!--   <p class="text-center" style="padding-top:10px;">Select a Consignee</p>-->
+          <!-- </div>-->
+         <div class="section1_" style="display:block;">
+             <div class="row">
+
+                 <table class="table table-striped table_1" style="display:none;">
+                    <thead class="table-success">
+                      <tr>
+                        <th>Date Added</th>
+                        <th style="background-color:#00897b;color:#fff;">Cars</th>
+                        <th style="background-color:#01579b;color:#fff;">Personal Effect</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody class="cargo_table_body"></tbody>
+               </table>
+             </div>
+
+         </div>
+         <div class="nodata1" style="text-align:center;font-size:40px;display:none;">
+                  <p>
+                    <i class="fas fa-people-carry"></i><br>
+                    <span class="nodata1_text">No Cargo Found</span>
+                  </p>
+               </div>
+         <div class="loader1"></div>
+         <div class="section2_" style="display:none;">
+               <div class="row section2_row"></div>
+         </div>
+         <div class="section3_" style="display:none;">
+                   <h5 style="text-align:center;">Select Clients Booking Confirmation</h5>
+                   <table class="table table-striped">
+                    <thead class="table-success">
+                      <tr>
+                        <th>Date Added</th>
+                        <th style="background-color:#00897b  ;color:#fff;">Vessel Name</th>
+                        <th>Booking Number</th>
+                        <th>Voyage Number</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody class="table_body_bc"></tbody>
+                  </table>
+                  <button class="btn btn-warning b_3_"> Back</button>
+         </div>
+         <div class="section4_" style="display:none;">
+                <div style="border:1px solid #eeeeee  ;padding:10px;">
+                    <h5 style="text-align:center;">Notify Party</h5>
+                    <div class="row">
+                        <div class="col-md-12">
+                          <div class="form-group">
+                               <label>Name</label>
+                               <input class="form-control" id="n_name">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Address</label>
+                               <input class="form-control" id="n_address">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Country</label>
+                               <input class="form-control" id="n_country">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Phone Number</label>
+                               <input class="form-control" id="n_pnum">
+                          </div>
+                       </div>
+                    </div>
+                </div>
+                <br>
+                <div style="border:1px solid #eeeeee;padding:10px;">
+                    <h5 style="text-align:center;">Marsk</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Seal Number</label>
+                               <input class="form-control" id="seal_num">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Demurrage</label>
+                               <input class="form-control" id="demurrage">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Container Number</label>
+                               <input class="form-control" id="container_num" autocomplete="off" name="container_num">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>AES Number</label>
+                               <input class="form-control" id="aes_num">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Originals to be released</label>
+                               <input class="form-control" id="originals_tobe_released">
+                          </div>
+                       </div>
+                       <div class="col-md-4" style="font-size:20px;">
+                         <div class="form-group">
+                             <label>Client as Agent</label><br>
+                             <label class="radio-inline " style="margin-right:30px;">
+                               <input type="radio" name="agent" id="yes" Value="Yes"> Yes
+                             </label>
+                             <label class="radio-inline">
+                                <input type="radio" name="agent" id="no" value="No"> No
+                             </label>
+                         </div>
+                     </div>
+                     <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Fowarding Agent References</label>
+                               <textarea class="form-control" id="fowarding_agent_ref" style="resize:none;" name="fowarding_agent_ref"></textarea>
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>For Transhipment to</label>
+                               <input class="form-control" id="for_transhipment_to"  name="for_transhipment_to">
+                          </div>
+                       </div>
+                       <div class="col-md-4">
+                          <div class="form-group">
+                               <label>Point and country of origin</label>
+                               <input class="form-control" id="point_and_contry_of_origin"  name="point_and_contry_of_origin">
+                          </div>
+                       </div>
+                    </div>
+                </div>
+         </div>
+         </div>
+      </div>
+      <div class="modal-footer" style="display:none;">
+        <div class="book_form_btns" style="display:block">
+           <button class="btn btn-warning saveandfilldockreceipt" id="saveandfilldockreceipt" style="margin-right:20px;"><i class="fas fa-arrow-right"></i> Save and Redirect to Dock Receipt</button>
+
+            <button class="btn btn-danger back_3" id="" style="float:right;"><i class="fas fa-arrow-left"></i> Back</button>
+
+            <button type="submit" class="btn btn-primary">Create Form</button>
+            <!--<button type="button" class="btn btn-primary createFormAndEmail">Create Form and Email</button>-->
+            <button type="button" class="btn btn-secondary" onclick="location.reload()">Close</button>
+        </div>
+        <div class="dock_form_btns" style="display:none;">
+             <button class="btn btn-warning b_4_" id="" style="float:right;"><i class="fas fa-arrow-left"></i> Back</button>
+            <button type="button" class="btn btn-primary createForm_doc">Create Form</button>
+            <!--<button type="button" class="btn btn-primary createFormAndEmail">Create Form and Email</button>-->
+            <button type="button" class="btn btn-secondary" onclick="location.reload()">Close</button>
+        </div>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<div class="loader"></div>
+<div class="nodata" style="text-align:center;font-size:40px;display:none;">
+  <p>
+    <i class="fas fa-people-carry"></i><br>
+    <span class="nodata_text">No Cargo Found</span>
+  </p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.21.0/moment.min.js"></script>
+<script src="/js/booking_confirm.js"></script>

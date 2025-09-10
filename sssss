@@ -1,0 +1,268 @@
+import os
+import json
+import logging
+import traceback
+import boto3
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from datetime import datetime, timedelta, timezone
+import csv
+import argparse
+import sys
+
+logger = logging.getLogger()
+logger.setLevel(os.environ.get("LOGGING_LEVEL", "INFO"))
+
+# S3 config
+SOURCE_BUCKET = os.environ.get("SOURCE_BUCKET")
+SOURCE_PREFIX = os.environ.get("SOURCE_PREFIX")
+DEST_BUCKET_NAME = os.environ.get("DEST_BUCKET_NAME")
+DEST_PREFIX = os.environ.get("DEST_PREFIX")
+
+def get_db_credentials():
+    secret_id = os.environ.get("SECRET_ID")
+    if not secret_id:
+        raise ValueError("SECRET_ID environment variable is not set.")
+    client = boto3.client('secretsmanager')
+    secret = client.get_secret_value(SecretId=secret_id)
+    secret_dict = json.loads(secret['SecretString'])
+    return secret_dict['username'], secret_dict['password'], secret_dict["default_dbname"], secret_dict["host"]
+
+def check_file_exists_s3(attachmentid, created_at, fileextension):
+    s3 = boto3.client('s3')
+    created_at_folder = created_at.strftime("%Y%m%d")
+    search_prefix = f"{SOURCE_PREFIX}{created_at_folder}/"
+    paginator = s3.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=SOURCE_BUCKET, Prefix=search_prefix):
+        for obj in page.get('Contents', []):
+            key = obj['Key']
+            if key.endswith(f"{attachmentid}.{fileextension}"):
+                return True
+    return False
+
+def add_status_column_to_csv(csv_filename):
+    temp_filename = f"{csv_filename}.temp"
+    with open(csv_filename, 'r', newline='') as infile:
+        reader = csv.DictReader(infile)
+
+        # Skip processing if the file has no headers
+        if reader.fieldnames is None:
+            print(f"Skipping file '{csv_filename}' — no header row found.")
+            return
+
+        with open(temp_filename, 'w', newline='') as outfile:
+            fieldnames = list(reader.fieldnames) + ['status']
+            writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for row in reader:
+                attachment_id = str(row.get('attachmentid', ''))
+                fileextension = str(row.get('fileextension', ''))
+                created_at = row.get('imagedate')
+                if created_at:
+                    try:
+                        created_at = datetime.fromisoformat(created_at)
+                        file_exists = check_file_exists_s3(attachment_id, created_at, fileextension)
+                        row['status'] = 'found' if file_exists else 'notfound'
+                    except ValueError:
+                        row['status'] = 'invalid_date'
+                else:
+                    row['status'] = 'notfound'
+                writer.writerow(row)
+
+    os.replace(temp_filename, csv_filename)
+
+
+def copy_png_files(attachmentid, created_at, fileextension):
+    s3 = boto3.client('s3')
+    paginator = s3.get_paginator('list_objects_v2')
+    copied_files = []
+    created_at_folder = created_at.strftime("%Y%m%d")
+    search_prefix = f"{SOURCE_PREFIX}{created_at_folder}/"
+    print(f"Searching for files with prefix: {search_prefix} and attachment ID: {attachmentid}.{fileextension}")
+    for page in paginator.paginate(Bucket=SOURCE_BUCKET, Prefix=search_prefix):
+        for obj in page.get('Contents', []):
+            key = obj['Key']
+            if key.endswith(f"{attachmentid}.{fileextension}"):
+                print(f"Found file: {key}")
+                relative_path = key[len(SOURCE_PREFIX):]
+                dest_key = f"{DEST_PREFIX}{relative_path}"
+                s3.copy_object(
+                    CopySource={'Bucket': SOURCE_BUCKET, 'Key': key},
+                    Bucket=DEST_BUCKET_NAME,
+                    Key=dest_key
+                )
+                copied_files.append({'source': key, 'destination': dest_key})
+    return copied_files
+
+def upload_csv_to_s3(csv_filename, bucket_name, run_date):
+    """
+    Uploads a CSV file to S3 at path: ECG/rstattachmentlog/{run-date}/{object-name}
+    Returns a dict with upload status and S3 key.
+    """
+    s3_client = boto3.client('s3')
+    object_name = os.path.basename(csv_filename)
+    s3_key = f"rts-file-transfer-activity-records/{run_date}/{object_name}"
+    try:
+        s3_client.upload_file(csv_filename, bucket_name, s3_key)
+        return {"file": csv_filename, "s3_key": s3_key, "status": "success"}
+    except Exception as e:
+        return {"file": csv_filename, "s3_key": s3_key, "status": "error", "error": str(e)}
+
+def json_serial(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+def main():
+    parser = argparse.ArgumentParser(description="copy PNG files based on DB query results, week by week.")
+    parser.add_argument('--limit', type=int, default=100, help='Limit for DB query')
+    parser.add_argument('--offset', type=int, default=0, help='Offset for DB query')
+    parser.add_argument('--payerId', required=False, help='Payer ID')
+    parser.add_argument('--procedureCodes', required=False, help='Comma-separated procedure codes')
+    parser.add_argument('--startdate', required=False, help='Start date (YYYY-MM-DD)')
+    parser.add_argument('--enddate', required=False, help='End date (YYYY-MM-DD)')
+    args = parser.parse_args()
+
+    try:
+        limit = args.limit
+        offset = args.offset
+        payer_id = (
+                args.payerId
+                or os.environ.get("PAYER_ID", "52133")
+            )
+        procedure_codes = (
+                args.procedureCodes
+                or os.environ.get(
+                    "CDT_CODES",
+                    "D2710,D2712,D2720,D2721,D2722,D2740,D2750,D2751,D2752,D2780,D2781,D2782,D2783,D2790,D2791,D2792,D2794,D2799"
+                )
+            )
+        startdate_str = (
+                args.startdate
+                or os.environ.get("START_DATE", "2023-01-01")
+            )
+        enddate_str = (
+                args.enddate
+                or os.environ.get("END_DATE", "2024-01-01")
+            )
+
+        startdate = datetime.strptime(startdate_str, "%Y-%m-%d")
+        enddate = datetime.strptime(enddate_str, "%Y-%m-%d")
+
+        procedure_codes_array = '{' + ','.join(procedure_codes.split(',')) + '}'
+
+        username, password, default_dbname, host = get_db_credentials()
+        port = host.split(':')[-1] if ':' in host else 5432
+        newHost = host.split(':')[0]
+
+        conn = psycopg2.connect(
+            host=newHost,
+            port=port,
+            dbname=default_dbname,
+            user=username,
+            password=password,
+            sslmode='require',
+            cursor_factory=RealDictCursor
+        )
+
+         # --- Loop through each week ---
+        week_results_files = []
+        week_start = startdate
+        batch_size = limit  # batch size for streaming
+
+        while week_start < enddate:
+            week_end = min(week_start + timedelta(days=7), enddate)
+            sql = """
+            SELECT
+                r.requestid,
+                r.payerid,
+                r.procedurecode,
+                a.attachmentid,
+                f.fileextension,
+                f.filesize,
+                f.imagedate
+            FROM
+                dbo.rfai_request r
+            INNER JOIN dbo.rfai_attachment a ON r.requestid = a.requestid
+            INNER JOIN dbo.rfai_attachmentfile f ON a.attachmentid = f.attachmentid
+            WHERE
+                r.payerid = %s
+                AND r.procedurecode = ANY(%s::text[])
+                AND f.imagedate >= %s
+                AND f.imagedate < %s
+            ORDER BY f.imagedate, r.requestid
+            """
+            week_num = week_start.isocalendar()[1]
+            year_num = week_start.year
+            filename = f"{week_num}-{year_num}.csv"
+            with open(filename, "w", newline="") as csvfile:
+                with conn.cursor(name='streaming_cursor', cursor_factory=RealDictCursor) as cur:
+                    cur.execute(sql, (payer_id, procedure_codes_array, week_start, week_end))
+                    writer = None
+                    while True:
+                        rows = cur.fetchmany(batch_size)
+                        if not rows:
+                            break
+                        if writer is None and rows:
+                            writer = csv.DictWriter(csvfile, fieldnames=rows[0].keys())
+                            writer.writeheader()
+                        for row in rows:
+                            # Convert datetime to string for CSV
+                            row = {k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in row.items()}
+                            writer.writerow(row)
+            week_results_files.append(filename)
+            week_start = week_end
+
+
+        conn.close()
+        
+        # Add status column to each CSV file
+        for filename in week_results_files:
+            add_status_column_to_csv(filename)
+
+
+        ## After week_results_files is populated ##
+        copy_results = []
+        for filename in week_results_files:
+            with open(filename, newline="") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    if row.get('status') == 'found':
+                        attachment_id = str(row['attachmentid'])
+                        fileextension = str(row['fileextension'])
+                        created_at = row.get('imagedate')
+                        if created_at:
+                            created_at = datetime.fromisoformat(created_at)
+                            copied = copy_png_files(attachment_id, created_at, fileextension)
+                            copy_results.append({
+                                'attachmentid': attachment_id,
+                                'imagedate': created_at.isoformat(),
+                                'copied_files': copied
+                            })
+                        
+  
+
+        # --- Upload CSVs to S3 ---
+        run_date = datetime.now().strftime("%Y%m%d")
+        upload_results = []
+        for filename in week_results_files:
+            result = upload_csv_to_s3(filename, SOURCE_BUCKET, run_date)
+            upload_results.append(result)
+
+        print(json.dumps({"copy_results": copy_results, "csv_files": week_results_files}, default=json_serial))
+
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        logger.error(traceback.format_exc())
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main() #
+
+
+Modularize the main function which is very big and increases the complexity of the function. 
+DO NOT USE “print”, instead use “logger”. Ensure that all the logs are getting into CloudWatch and Log Subscription is place. 
+Verify if file exists before copying to S3. This is required, to ensure we are not charged transmission costs, for re-copying the files in the same bucket and at the same path. 
+There are no alerts implemented for the error occurring in the process. 

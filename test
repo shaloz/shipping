@@ -1,0 +1,71 @@
+from botocore.config import Config
+
+# Reuse one tuned S3 client everywhere
+S3_CFG = Config(
+    retries={"max_attempts": 8, "mode": "adaptive"},
+    connect_timeout=5,
+    read_timeout=60,
+)
+s3 = boto3.client("s3", config=S3_CFG)
+
+# Simple cache: { "YYYYMMDD": set(keys) }
+_keys_cache = {}
+
+def _list_keys_for_date(date_yyyymmdd: str) -> set:
+    """List all keys under SOURCE_PREFIX/<YYYYMMDD>/ once and cache them."""
+    if date_yyyymmdd in _keys_cache:
+        return _keys_cache[date_yyyymmdd]
+
+    prefix = f"{SOURCE_PREFIX}{date_yyyymmdd}/"
+    keys = set()
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=SOURCE_BUCKET, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            keys.add(obj["Key"])
+    _keys_cache[date_yyyymmdd] = keys
+    return keys
+
+def add_status_column_to_csv(csv_filename):
+    temp_filename = f"{csv_filename}.temp"
+    with open(csv_filename, 'r', newline='') as infile:
+        reader = csv.DictReader(infile)
+        if reader.fieldnames is None:
+            logger.warning(f"Skipping file '{csv_filename}' — no header row found.")
+            return
+
+        rows = list(reader)
+        needed_dates = set()
+        for r in rows:
+            d = r.get('imagedate')
+            if d:
+                try:
+                    needed_dates.add(datetime.fromisoformat(d).strftime("%Y%m%d"))
+                except ValueError:
+                    pass
+
+        date_to_keys = {d: _list_keys_for_date(d) for d in needed_dates}
+
+        with open(temp_filename, 'w', newline='') as outfile:
+            fieldnames = list(reader.fieldnames) + ['status']
+            writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for row in rows:
+                attachment_id = str(row.get('attachmentid', ''))
+                fileextension = str(row.get('fileextension', ''))
+                created_at = row.get('imagedate')
+                if not created_at:
+                    row['status'] = 'notfound'
+                else:
+                    try:
+                        dt = datetime.fromisoformat(created_at)
+                        folder = dt.strftime("%Y%m%d")
+                        suffix = f"{attachment_id}.{fileextension}"
+                        keys = date_to_keys.get(folder, set())
+                        row['status'] = 'found' if any(k.endswith(suffix) for k in keys) else 'notfound'
+                    except ValueError:
+                        row['status'] = 'invalid_date'
+                writer.writerow(row)
+
+    os.replace(temp_filename, csv_filename)
+    logger.info(f"Added status column to {csv_filename}")
